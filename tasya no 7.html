@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tugas Rutin 7 (v2) — Login & Register</title>
+<style>
+:root{--bg:#eaf3ef;--card:#fff;--ink:#10231c;--mu:#58736a;--ac:#0f766e;--bd:#c5dad2;--wr:#b45309;--er:#b91c1c;--ok:#15803d;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0c1815;--card:#13251f;--ink:#e4f3ed;--mu:#8fb0a4;--ac:#2dd4bf;--bd:#27443b;--wr:#fbbf24;--er:#f87171;--ok:#4ade80}}
+:root[data-theme="dark"]{--bg:#0c1815;--card:#13251f;--ink:#e4f3ed;--mu:#8fb0a4;--ac:#2dd4bf;--bd:#27443b;--wr:#fbbf24;--er:#f87171;--ok:#4ade80}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Trebuchet MS",system-ui,sans-serif;padding:16px}
+.wrap{max-width:440px;margin:0 auto}
+.tabs{display:flex;gap:4px;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:4px;margin-bottom:12px}
+.tabs button{flex:1;background:none;border:0;border-radius:9px;padding:9px 4px;font:inherit;font-size:14px;color:var(--mu)}
+.tabs button.on{background:var(--ac);color:var(--bg);font-weight:700}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:18px;padding:22px 20px}
+h1{font:700 26px/1.2 Georgia,serif;margin:0 0 4px}
+.sub{color:var(--mu);font-size:14px;margin:0 0 14px}
+label{display:block;font-weight:600;font-size:14px;margin:14px 0 5px}
+.in{display:flex;gap:6px}
+input[type=text],input[type=email],input[type=password]{flex:1;min-width:0;width:100%;padding:11px 12px;border:1.5px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit}
+input:focus-visible,button:focus-visible{outline:3px solid var(--ac);outline-offset:1px}
+.eye{flex:none;width:auto;margin:0;padding:0 12px;background:var(--bg);color:var(--mu);border:1.5px solid var(--bd);border-radius:10px;font:inherit;font-size:13px}
+.btn{width:100%;margin-top:18px;padding:12px;border:0;border-radius:10px;background:var(--ac);color:var(--bg);font:700 16px inherit;font-family:inherit}
+.btn.out{background:none;border:1.5px solid var(--er);color:var(--er)}
+.btn[disabled]{opacity:.5}
+.msg{padding:10px 12px;border-radius:10px;font-size:14px;margin:0 0 12px;border:1px solid}
+.msg.e{border-color:var(--er);color:var(--er)}.msg.s{border-color:var(--ok);color:var(--ok)}.msg.w{border-color:var(--wr);color:var(--wr)}
+.msg ul{margin:0;padding-left:18px}
+.meter{display:flex;gap:4px;margin-top:8px}.meter i{flex:1;height:6px;border-radius:3px;background:var(--bd)}
+.rules{font-size:13px;color:var(--mu);margin:6px 0 0;display:flex;gap:10px;flex-wrap:wrap}.rules .y{color:var(--ok)}
+.link{background:none;border:0;color:var(--ac);text-decoration:underline;font:inherit;padding:0}
+.id{display:flex;gap:14px;align-items:center;background:var(--ac);color:var(--bg);border-radius:14px;padding:16px;margin:12px 0}
+.av{width:56px;height:56px;border-radius:50%;background:var(--bg);color:var(--ac);display:grid;place-items:center;font:700 22px Georgia,serif;flex:none}
+.id b{display:block;font-size:18px}.id span{font-size:13px;opacity:.9;word-break:break-all}
+table{width:100%;border-collapse:collapse;font-size:13px}td,th{text-align:left;padding:7px 4px;border-bottom:1px solid var(--bd);vertical-align:top}th{color:var(--mu);width:34%}
+.h{font:11.5px monospace;word-break:break-all}
+pre{background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:10px;overflow-x:auto;font-size:12.5px;margin:6px 0}
+details{margin:4px 0}summary{font-weight:700;padding:8px 0}
+.foot{text-align:center;color:var(--mu);font-size:14px;margin-top:14px}
+</style></head><body>
+<div class="wrap">
+<div class="tabs" id="tabs"></div>
+<div id="app"></div>
+<p class="sub" style="text-align:center;margin-top:12px">Simulasi JavaScript. Password di-"hash" hanya untuk peragaan; kode PHP asli ada di tab Kode PHP.</p>
+</div>
+<script>
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let users=[],me=null,view='login',tab='app',msg=null,keep={},fails=0,lockUntil=0,since=0,show={};
+const hash=p=>{let h=5381;for(const c of p)h=((h<<5)+h+c.charCodeAt(0))>>>0;return '$2y$10$'+btoa(h+'.'+p.length+'.'+p.split('').reverse().join('')).replace(/=/g,'').padEnd(53,'Q').slice(0,53)};
+const now=()=>new Date().toLocaleString('id-ID');
+const pwI=(id,ph)=>`<div class="in"><input id="${id}" type="${show[id]?'text':'password'}" value="${esc(keep[id]||'')}" ${ph?`placeholder="${ph}"`:''} oninput="keep['${id}']=this.value;${id==='rp'?'meterUpd()':''}" autocomplete="off"><button type="button" class="eye" onclick="keep['${id}']=document.getElementById('${id}').value;show['${id}']=!show['${id}'];render()">${show[id]?'Sembunyi':'Lihat'}</button></div>`;
+const box=m=>m?`<div class="msg ${m.t}">${Array.isArray(m.m)?'<ul>'+m.m.map(x=>`<li>${esc(x)}</li>`).join('')+'</ul>':esc(m.m)}</div>`:'';
+function score(p){return [p.length>=8,/[a-z]/.test(p)&&/[A-Z]/.test(p),/\d/.test(p),/[^A-Za-z0-9]/.test(p)]}
+function meterHtml(p){const s=score(p),n=s.filter(Boolean).length,col=n<=1?'var(--er)':n<=2?'var(--wr)':'var(--ok)';
+ return `<div class="meter" id="mt">${[0,1,2,3].map(i=>`<i style="background:${i<n?col:'var(--bd)'}"></i>`).join('')}</div><div class="rules" id="rl">${['8+ karakter','Huruf besar & kecil','Angka','Simbol'].map((t,i)=>`<span class="${s[i]?'y':''}">${s[i]?'✓':'○'} ${t}</span>`).join('')}</div>`}
+function meterUpd(){const p=keep.rp||'';const t=document.createElement('div');t.innerHTML=meterHtml(p);document.getElementById('mt').replaceWith(t.children[0]);document.getElementById('rl').replaceWith(t.children[1])}
+function lockLeft(){return Math.max(0,Math.ceil((lockUntil-Date.now())/1000))}
+function render(){
+ const tabs={app:'Aplikasi',php:'Kode PHP',db:'Tabel users'};
+ document.getElementById('tabs').innerHTML=Object.entries(tabs).map(([k,l])=>`<button class="${k===tab?'on':''}" onclick="tab='${k}';render()">${l}</button>`).join('');
+ const a=document.getElementById('app');
+ if(tab==='php'){a.innerHTML=phpHtml();return}
+ if(tab==='db'){a.innerHTML=`<div class="card"><h1>Tabel users</h1><p class="sub">Password tersimpan sebagai hash, bukan teks asli.</p>${users.length?`<table>${users.map(u=>`<tr><th>#${u.id}</th><td>${esc(u.nama)}<br>${esc(u.email)}<br><span class="h">${u.h}</span><br><small>${u.at}</small></td></tr>`).join('')}</table>`:'<p>Belum ada data. Daftar dulu di tab Aplikasi.</p>'}</div>`;return}
+ let f=msg;msg=null;
+ if(view==='dash'&&!me){view='login';f={t:'e',m:'Silakan login terlebih dahulu (dashboard.php mengarahkan ke login.php).'}}
+ if(view==='register'){
+  a.innerHTML=`<div class="card"><h1>Buat akun baru</h1><p class="sub">Gratis, cukup satu menit.</p>${box(f)}
+  <label>Nama lengkap</label><input id="rn" type="text" value="${esc(keep.rn||'')}" oninput="keep.rn=this.value">
+  <label>Email</label><input id="re" type="email" value="${esc(keep.re||'')}" oninput="keep.re=this.value">
+  <label>Password</label>${pwI('rp')}${meterHtml(keep.rp||'')}
+  <label>Ulangi password</label>${pwI('rk')}
+  <label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" id="rt" ${keep.rt?'checked':''} onchange="keep.rt=this.checked"> Saya setuju dengan ketentuan penggunaan</label>
+  <button class="btn" onclick="reg()">Buat akun</button><p class="foot">Sudah punya akun? <button class="link" onclick="view='login';render()">Masuk</button></p></div>`;
+ }else if(view==='login'){
+  const L=lockLeft();
+  a.innerHTML=`<div class="card"><h1>Selamat datang kembali</h1><p class="sub">Masuk untuk membuka dashboard kamu.</p>${box(f)}<div id="lk">${L?box({t:'w',m:`Terlalu banyak percobaan. Coba lagi dalam ${L} detik.`}):''}</div>
+  <label>Email</label><input id="le" type="email" value="${esc(keep.le||'')}" oninput="keep.le=this.value">
+  <label>Password</label>${pwI('lp')}
+  <label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" id="lr"> Ingat saya selama 30 hari</label>
+  <button class="btn" id="lb" ${L?'disabled':''} onclick="login()">Masuk</button><p class="foot">Belum punya akun? <button class="link" onclick="view='register';render()">Daftar</button></p></div>`;
+ }else{
+  const ini=me.nama.trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+  a.innerHTML=`<div class="card"><h1>Dashboard</h1>${box(f)}<div class="id"><div class="av">${esc(ini)}</div><div><b>${esc(me.nama)}</b><span>${esc(me.email)}</span></div></div>
+  <table><tr><th>Terdaftar</th><td>${me.at}</td></tr><tr><th>Login terakhir</th><td>${me.last}</td></tr><tr><th>Durasi sesi</th><td id="dur">0 detik</td></tr><tr><th>Cookie</th><td>${me.rem?'Ingat saya aktif (30 hari)':'Sesi biasa (hilang saat browser ditutup)'}</td></tr></table>
+  <label>Ubah nama</label><div class="in"><input id="nn" type="text" value="${esc(me.nama)}"><button class="eye" style="color:var(--ac)" onclick="rename()">Simpan</button></div>
+  <label>Ganti password</label>${pwI('po','Password lama')}<div style="height:6px"></div>${pwI('pn','Password baru (min. 8)')}
+  <button class="btn" onclick="chpw()">Ganti password</button><button class="btn out" onclick="logout()">Keluar</button></div>`;
+ }
+}
+function reg(){const n=(keep.rn||'').trim(),e=(keep.re||'').trim(),p=keep.rp||'',k=keep.rk||'',er=[];
+ if(n.length<3)er.push('Nama minimal 3 karakter.');
+ if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))er.push('Format email tidak valid.');
+ if(p.length<8)er.push('Password minimal 8 karakter.');else if(!/[A-Za-z]/.test(p)||!/\d/.test(p))er.push('Password harus mengandung huruf dan angka.');
+ if(p!==k)er.push('Konfirmasi password tidak cocok.');
+ if(!keep.rt)er.push('Centang persetujuan ketentuan penggunaan.');
+ if(!er.length&&users.some(u=>u.email.toLowerCase()===e.toLowerCase()))er.push('Email sudah terdaftar. Silakan masuk.');
+ if(er.length){msg={t:'e',m:er};render();return}
+ users.push({id:users.length+1,nama:n,email:e,h:hash(p),at:now()});keep={le:e};show={};view='login';msg={t:'s',m:'Akun dibuat. Silakan masuk.'};render()}
+function login(){const L=lockLeft();if(L)return;const e=(keep.le||'').trim(),p=keep.lp||'';
+ if(!e||!p){msg={t:'e',m:'Email dan password wajib diisi.'};render();return}
+ const u=users.find(x=>x.email.toLowerCase()===e.toLowerCase()&&x.h===hash(p));
+ if(!u){fails++;if(fails>=3){lockUntil=Date.now()+20000;fails=0;msg={t:'e',m:'Email atau password salah. Akun dikunci 20 detik.'}}else msg={t:'e',m:`Email atau password salah. Sisa percobaan: ${3-fails}.`};render();return}
+ fails=0;u.last=now();u.rem=document.getElementById('lr').checked;me=u;since=Date.now();keep={};show={};view='dash';msg={t:'s',m:'Login berhasil. session_regenerate_id() dipanggil.'};render()}
+function rename(){const n=document.getElementById('nn').value.trim();if(n.length<3){msg={t:'e',m:'Nama minimal 3 karakter.'}}else{me.nama=n;msg={t:'s',m:'Nama diperbarui.'}}render()}
+function chpw(){const o=keep.po||'',n=keep.pn||'';if(me.h!==hash(o))msg={t:'e',m:'Password lama salah.'};else if(n.length<8||!/[A-Za-z]/.test(n)||!/\d/.test(n))msg={t:'e',m:'Password baru minimal 8 karakter, huruf dan angka.'};else{me.h=hash(n);keep={};show={};msg={t:'s',m:'Password diganti.'}}render()}
+function logout(){me=null;view='login';msg={t:'s',m:'Kamu sudah keluar. session_destroy() dijalankan.'};render()}
+setInterval(()=>{const d=document.getElementById('dur');if(d&&me)d.textContent=Math.floor((Date.now()-since)/1000)+' detik';
+ const lk=document.getElementById('lk');if(lk&&view==='login'&&tab==='app'){const L=lockLeft();lk.innerHTML=L?box({t:'w',m:`Terlalu banyak percobaan. Coba lagi dalam ${L} detik.`}):'';const b=document.getElementById('lb');if(b)b.disabled=!!L}},500);
+function phpHtml(){const C=[['Tabel users (SQL)',`CREATE TABLE users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  nama VARCHAR(100) NOT NULL,
+  email VARCHAR(150) NOT NULL UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);`],['config/koneksi.php',`<?php
+$pdo = new PDO('mysql:host=localhost;dbname=tugas7;charset=utf8mb4','root','',[
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+]);`],['register.php',`<?php
+require 'config/koneksi.php';
+$errors = [];
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $nama = trim($_POST['nama'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $pw = $_POST['password'] ?? '';
+    if (strlen($nama) < 3) $errors[] = 'Nama minimal 3 karakter.';
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Format email tidak valid.';
+    if (strlen($pw) < 8) $errors[] = 'Password minimal 8 karakter.';
+    if ($pw !== ($_POST['konfirmasi'] ?? '')) $errors[] = 'Konfirmasi tidak cocok.';
+    if (!$errors) {
+        $cek = $pdo->prepare('SELECT id FROM users WHERE email = ?');
+        $cek->execute([$email]);
+        if ($cek->fetch()) $errors[] = 'Email sudah terdaftar.';
+    }
+    if (!$errors) {
+        $ins = $pdo->prepare('INSERT INTO users (nama,email,password) VALUES (?,?,?)');
+        $ins->execute([$nama, $email, password_hash($pw, PASSWORD_DEFAULT)]);
+        header('Location: login.php?registered=1'); exit;
+    }
+}`],['login.php',`<?php
+session_start();
+require 'config/koneksi.php';
+if (($_SESSION['locked_until'] ?? 0) > time()) {
+    $error = 'Terlalu banyak percobaan, coba lagi nanti.';
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $st = $pdo->prepare('SELECT * FROM users WHERE email = ?');
+    $st->execute([trim($_POST['email'] ?? '')]);
+    $u = $st->fetch(PDO::FETCH_ASSOC);
+    if ($u && password_verify($_POST['password'] ?? '', $u['password'])) {
+        session_regenerate_id(true);
+        $_SESSION['user'] = ['id'=>$u['id'],'nama'=>$u['nama'],'email'=>$u['email']];
+        $_SESSION['fails'] = 0;
+        header('Location: dashboard.php'); exit;
+    }
+    $_SESSION['fails'] = ($_SESSION['fails'] ?? 0) + 1;
+    if ($_SESSION['fails'] >= 3) $_SESSION['locked_until'] = time() + 20;
+    $error = 'Email atau password salah.';
+}`],['dashboard.php & logout.php',`<?php // dashboard.php
+session_start();
+if (!isset($_SESSION['user'])) { header('Location: login.php'); exit; }
+echo 'Selamat datang, ' . htmlspecialchars($_SESSION['user']['nama']);
+
+<?php // logout.php
+session_start();
+$_SESSION = [];
+session_destroy();
+header('Location: login.php'); exit;`]];
+ return '<div class="card"><h1>Kode PHP asli</h1><p class="sub">Tanpa framework: PDO, prepared statement, password_hash.</p>'+C.map(([t,c])=>`<details><summary>${t}</summary><pre>${esc(c)}</pre></details>`).join('')+'</div>'}
+render();
+</script></body></html>
